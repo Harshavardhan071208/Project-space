@@ -1,0 +1,40 @@
+#Lambda code
+
+import json
+import boto3
+from datetime import datetime
+
+# Initialize DynamoDB
+dynamodb = boto3.resource('dynamodb')
+
+# Your DynamoDB table name
+table = dynamodb.Table('myDynamo')
+
+def lambda_handler(event, context):
+    print("Received event:", json.dumps(event, indent=2))
+
+    for record in event['Records']:
+        bucket = record['s3']['bucket']['name']
+        key = record['s3']['object']['key']
+        size = record['s3']['object'].get('size', 0)
+
+        item = {
+            'harsha': key,    # ✅ Matches Partition Key exactly
+            'BucketName': bucket,
+            'ObjectKey': key,
+            'Size': size,
+            'UploadTime': datetime.utcnow().isoformat(),
+            'Status': 'Uploaded'
+        }
+
+        try:
+            table.put_item(Item=item)
+            print(f"✅ Inserted item for {key} into DynamoDB.")
+        except Exception as e:
+            print(f"❌ Error inserting item: {e}")
+            raise e
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Metadata successfully saved to DynamoDB!')
+    }
